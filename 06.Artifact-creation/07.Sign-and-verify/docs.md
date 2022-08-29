@@ -26,59 +26,6 @@ If the `ArtifactVerifyKey` option is set and Artifacts are not signed or the ver
 
 ! If the Mender Client is configured to enable signature verification (through the `ArtifactVerifyKey` option), it will reject any unsigned Artifacts. This is necessary because otherwise an attacker could simply inject unsigned Artifacts to bypass the signature verification.
 
-## Supported cryptography standards
-
-Mender supports following standards to interact with cryptographic tokens:
-* PKCS#11 (feature supported on Linux OS)
-
-### Signing
-
-In order to sign an artifact using PKCS#11 interface, either hardware security modules (HSM), smart cards or Key Storage Provider (KSP) can be used.
-
-First, check if openssl and necessary libraries are installed:
-
-```bash
-sudo apt install openssl libengine-pkcs11-openssl
-```
-
-Next, proceed to OpenSSL configuration file:
-```bash
-user@mender:~$ sudo vim /etc/ssl/openssl.cnf
-openssl_conf = openssl_init
-
-[openssl_init]
-engines = engine_section
-
-[engine_section]
-pkcs11 = pkcs11_section
-
-[pkcs11_section]
-dynamic_path = "/usr/lib/x86_64-linux-gnu/engines-1.1/pkcs11.so"
-MODULE_PATH = "~/smtools-linux-x64/smpkcs11.so"
-```
-
-!!! Engine shared object needs to be copied to proper location (in this case, SoftHSMv2 `~/smtools-linux-x64/smpkcs11.so` was used)
-
-To make sure PKCS#11 engine is available for OpenSSL, issue following command:
-```bash
-user@mender:~$ openssl engine -t pkcs11
-(pkcs11) pkcs11 engine
-     [ available ]
-```
-
-After PKCS#11 engine is set up, artifact can be successfully signed with use of PKCS#11 URI:
-```bash
-user@mender:~$ ./mender-artifact sign --key-pkcs11 "pkcs11:object=device;type=private" artifact.mender
-```
-
-### Verifying
-
-PKCS#11 URI can also be used to verify signed artifacts:
-
-```bash
-user@mender:~$ ./mender-artifact validate --key-pkcs11 "pkcs11:object=device;type=private" artifact.mender
-```
-
 ## Supported signing algorithms
 
 Mender supports the following signing algorithms:
@@ -177,3 +124,58 @@ For OS specific instructions on how to install and enable verification keys, vis
 ## Cloud Key Management
 
 It is possible to sign Artifacts using keys in Cloud Key Management, allowing developers to sign Mender Artifacts without ever accessing the private signing key. Currently the mender-artifact tool supports [Google Cloud Key Management](https://cloud.google.com/security-key-management?target=_blank). For more information, check the help screen for the `gcp-kms-key` option, available by running the command `mender-artifact sign --help`.
+
+## Supported cryptography standards
+
+Mender supports following standards to interact with cryptographic tokens:
+* PKCS#11 (feature supported on Linux OS)
+
+### Signing
+
+In order to sign an artifact using PKCS#11 interface, either hardware security modules (HSM), smart cards or Key Storage Provider (KSP) can be used.
+
+First, check if openssl and necessary libraries are installed:
+
+```bash
+sudo apt install openssl libengine-pkcs11-openssl
+```
+
+Next, proceed to OpenSSL configuration file:
+```bash
+user@mender:~$ sudo vim /etc/ssl/openssl.cnf
+openssl_conf = openssl_init
+
+[openssl_init]
+engines = engine_section
+
+[engine_section]
+pkcs11 = pkcs11_section
+
+[pkcs11_section]
+engine_id = pkcs11
+MODULE_PATH = /usr/lib/softhsm/libsofthsm2.so
+init = 0
+```
+
+You need to adjust MODULE_PATH according to your system.
+
+To make sure PKCS#11 engine is available for OpenSSL, issue following command:
+```bash
+user@mender:~$ openssl engine -t pkcs11
+(pkcs11) pkcs11 engine
+     [ available ]
+```
+
+After PKCS#11 engine is set up, artifact can be successfully signed with use of PKCS#11 URI:
+```bash
+user@mender:~$ ./mender-artifact sign --key-pkcs11 "pkcs11:object=device;type=private" artifact.mender
+```
+
+### Verifying
+
+PKCS#11 URI can also be used to verify signed artifacts:
+
+```bash
+user@mender:~$ ./mender-artifact validate --key-pkcs11 "pkcs11:object=device;type=private" artifact.mender
+```
+
